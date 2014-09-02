@@ -7,21 +7,22 @@
 
 package main
 
-import "os"
-import "os/signal"
-import "io"
-import "fmt"
-import "flag"
-import "net"
-import "code.google.com/p/go.crypto/otr"
-import "crypto/rand"
-import "strings"
+import (
+	"code.google.com/p/go.crypto/otr"
+	"crypto/rand"
+	"flag"
+	"fmt"
+	"io"
+	"net"
+	"os"
+	"os/signal"
+	"strings"
+)
 
 // TODO: figure out a good default port
 const OTRPort = ":2147"
 
 type Command struct {
-	name  string
 	desc  string
 	flags *flag.FlagSet
 	args  []string
@@ -38,6 +39,7 @@ var (
 	contactsReverse map[string]string = make(map[string]string) // fingerprint -> name
 
 	// Things parsed from command-line arguments
+	cmdName        string
 	cmd            *Command
 	args           []string // Non-flag arguments
 	dir            string
@@ -48,7 +50,7 @@ var (
 	remember       string
 	expect         string
 
-	cmds []Command // Commands (effectively a constant)
+	cmds map[string] *Command // Commands (effectively a constant)
 )
 
 // Command-line flags
@@ -274,13 +276,13 @@ func parseConversationFlags() {
 		}
 	}
 
-	if cmd.name == "proxy" {
+	if cmdName == "proxy" {
 		return
 	}
 
 	if len(args) == 1 {
 		address = args[0]
-		if cmd.name == "listen" {
+		if cmdName == "listen" {
 			if !strings.HasPrefix(address, ":") {
 				exitPrintf("Can't listen on a remote address (%s).  "+
 					"Specify a local port with ':port'.\n", address)
@@ -392,37 +394,28 @@ func fingerprints() {
 	}
 }
 
-func matchCommand(name string) *Command {
-	for _, cmd := range cmds {
-		if cmd.name == name {
-			return &cmd
-		}
-	}
-	return nil
-}
-
 func helpFlags() *flag.FlagSet {
 	return flag.NewFlagSet("help", flag.ExitOnError)
 }
 
 func help() {
-	if cmd != nil && cmd.name == "help" {
+	if cmdName == "help" {
 		if len(args) > 0 {
-			cmd = matchCommand(args[0])
-			if cmd != nil {
-				helpCommand(cmd)
+			if _, found := cmds[args[0]]; found {
+				helpCommand(args[0])
 			}
 		}
 	}
 	fmt.Fprintf(os.Stderr, "Usage:\n")
-	for _, cmd := range cmds {
-		fmt.Fprintf(os.Stderr, "otrcat %-15s %s\n", cmd.name, cmd.desc)
+	for name, cmd := range cmds {
+		fmt.Fprintf(os.Stderr, "otrcat %-15s %s\n", name, cmd.desc)
 	}
 	os.Exit(1)
 }
 
-func helpCommand(cmd *Command) {
-	fmt.Fprintf(os.Stderr, "Usage: otrcat %s", cmd.name)
+func helpCommand(name string) {
+	cmd := cmds[name]
+	fmt.Fprintf(os.Stderr, "Usage: otrcat %s", name)
 	for _, arg := range cmd.args {
 		fmt.Fprintf(os.Stderr, " %s", arg)
 	}
@@ -432,33 +425,36 @@ func helpCommand(cmd *Command) {
 }
 
 func main() {
-	cmds = []Command{
-		Command{"connect", "start a conversation", connectFlags(), []string{"[host][:port]"}, connect},
-		Command{"fingerprints", "show contacts' fingerprints", fingerprintsFlags(), []string{}, fingerprints},
-		Command{"genkey", "create a new private key", genkeyFlags(), []string{}, genkey},
-		Command{"help", "help on each command", helpFlags(), []string{"[command]"}, help},
-		Command{"listen", "wait for someone to start a conversation", listenFlags(), []string{"[:port]"}, listen},
-		Command{"proxy", "connect with a proxy command", proxyFlags(), []string{"command", "[args]"}, proxy},
+	cmds = map[string] *Command{
+		"connect":      &Command{"start a conversation", connectFlags(), []string{"[host][:port]"}, connect},
+		"fingerprints": &Command{"show contacts' fingerprints", fingerprintsFlags(), []string{}, fingerprints},
+		"genkey":       &Command{"create a new private key", genkeyFlags(), []string{}, genkey},
+		"help":         &Command{"help on each command", helpFlags(), []string{"[command]"}, help},
+		"listen":       &Command{"wait for someone to start a conversation", listenFlags(), []string{"[:port]"}, listen},
+		"proxy":        &Command{"connect with a proxy command", proxyFlags(), []string{"command", "[args]"}, proxy},
 	}
 	if len(os.Args) < 2 {
 		help()
 	}
-	cmd = matchCommand(os.Args[1])
-	if cmd == nil {
+
+	var found bool
+	cmdName = os.Args[1]
+	cmd, found = cmds[cmdName]
+	if !found {
 		help()
 	}
 	cmd.flags.Parse(os.Args[2:])
 	args = cmd.flags.Args()
-	if cmd.name == "proxy" {
+	if cmdName == "proxy" {
 		if len(args) == 0 {
 			fmt.Fprintf(os.Stderr, "'proxy' needs a command to be specified.\n")
-			helpCommand(cmd)
+			helpCommand(cmdName)
 		}
 	} else {
 		if len(args) > len(cmd.args) {
 			fmt.Fprintf(os.Stderr, "%s only takes up to %d parameters.\n",
-				cmd.name, len(cmd.name))
-			helpCommand(cmd)
+				cmdName, len(cmd.args))
+			helpCommand(cmdName)
 		}
 	}
 	dir = os.ExpandEnv(dir)

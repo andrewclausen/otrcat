@@ -8,12 +8,14 @@
 
 package main
 
-import "os"
-import "io"
-import "io/ioutil"
-import "fmt"
-import "code.google.com/p/go.crypto/otr"
-import "encoding/base64"
+import (
+	"code.google.com/p/go.crypto/otr"
+	"encoding/base64"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+)
 
 // Establishes that the otrcat directory exists.  If it doesn't, then either
 // fix it or complain about it.

@@ -10,8 +10,10 @@
 
 package main
 
-import "io"
-import "encoding/json"
+import (
+	"encoding/json"
+	"io"
+)
 
 type MessageEncoder struct {
 	json.Encoder

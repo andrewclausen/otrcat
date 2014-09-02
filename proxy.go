@@ -7,9 +7,11 @@
 
 package main
 
-import "io"
-import "os"
-import "os/exec"
+import (
+	"io"
+	"os"
+	"os/exec"
+)
 
 type PipePair struct {
 	io.ReadCloser
