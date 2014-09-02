@@ -32,11 +32,11 @@ Why you SHOULD use Otrcat:
 	remains a daunting task.
 
       *	The goal of Otrcat is to implement only one task but in a very secure
-	way: an authenticated, encrypted, and forward secure communication channel.
-	It is not intended to reach the complexity level of OpenSSH that
-	provides various additional tools such as login, terminal management,
-	port forwarding, stream multiplexing, client/server logic, and
-	cryptography in one big package.
+	way: an authenticated, encrypted, and forward secure communication
+	channel.  It is not intended to reach the complexity level of OpenSSH
+	that provides various additional tools such as login, terminal
+	management, port forwarding, stream multiplexing, client/server logic,
+	and cryptography in one big package.
 
       *	The OTR protocol has deniability features absent from SSH and SSL.
 	Roughly speaking, participants in an OTR conversation publish secret
