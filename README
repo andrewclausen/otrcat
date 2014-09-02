@@ -1,0 +1,130 @@
+Otrcat, Copyright (C) 2014 by Andrew Clausen
+This program may be distributed under the BSD-style licence that Go is
+released under; see https://golang.org/LICENSE.
+
+
+SUMMARY
+
+Otrcat is a general purpose tool for communicating using the Off-The-Record
+protocol.
+
+
+INTRODUCTION
+
+Otrcat is a general purpose tool for communicating using the Off-The-Record
+protocol. It is designed to be easily combined with other programs and
+protocols. For example, Otrcat can provide secure shell access to servers
+similar to SSH or serve as a secure tunnel for TCP connections.
+
+The leading alternatives to Otrcat are the OpenSSL s_client/s_server commands,
+Socat's OpenSSL commands, OpenSSH, or spiped. We discuss the main advantages
+and disadvantages of Otrcat over these related tools in turn:
+
+Why you SHOULD use Otrcat:
+      *	Otrcat is implemented in golang, a modern and easy to read programming
+	language. The advantage is that Otrcat's code is small (~600 lines)
+	and clean.  This is in contrast to the widely adopted OpenSSH which is
+	implemented in C.  The main disadvantage of using such an old language
+	is the required complexity which makes it hard for most people to read
+	and verify the security critical code and thus likely leads to
+	vulnerabilities.  Although there have been plans by the OpenSSH
+	maintainers to clean up the code (for example by using libevent), it
+	remains a daunting task.
+
+      *	The goal of Otrcat is to implement only one task but in a very secure
+	way: an authenticated, encrypted, and forward secure communication channel.
+	It is not intended to reach the complexity level of OpenSSH that
+	provides various additional tools such as login, terminal management,
+	port forwarding, stream multiplexing, client/server logic, and
+	cryptography in one big package.
+
+      *	The OTR protocol has deniability features absent from SSH and SSL.
+	Roughly speaking, participants in an OTR conversation publish secret
+	information regularly, to help an eavesdropper falsify any possible
+	conversation.
+
+
+Why you SHOULD NOT use Otrcat:
+      *	The OTR protocol currently only supports 1024-bit DSA keys. We hope,
+	this will change soon.
+      *	It is still slow.
+      *	It's immature -- only tested on FreeBSD and Linux, no unit tests, etc.
+      *	If we didn't mention it yet: Otrcat is immature!!! Know what you do.
+
+
+GETTING STARTED
+
+1. To get started, first generate your private OTR key (which will be stored
+   in ~/.otrcat) by typing
+
+	otrcat genkey
+
+2. You can test this works by typing
+
+	otrcat connect
+
+   in one terminal, and
+
+	otrcat listen
+
+   on another. You should be able to "talk" to yourself.
+
+
+SECURITY
+
+Otrcat is essentially peer-to-peer: it does not matter who listens and who
+connects to whom. Otrcat keeps a list of known contacts, uses OTR's underlying
+cryptographic protocol to verify who you are communicating with, and then
+encrypts your communication. There are three security options: -anyone,
+-expect, and -remember. If none of them are specified, then Otrcat will accept
+any known contact and refuse to communicate with an unknown contact. This
+behaviour can be changed as follows:
+
+-anyone		allows connections from everyone. Otrcat will tell you who the
+		contact is, if you are already acquainted. Example:
+
+		otrcat listen -anyone
+
+-remember NAME	implies the -anyone option, but it remembers the contact for
+		future reference under the given name. Example:
+
+		otrcat listen -remember alice
+
+-expect NAME	only accepts connections from a specified contact.  All other
+		connections are rejected. Example:
+
+		otrcat listen -expect alice
+
+
+COMBINING WITH OTHER PROGRAMS
+
+Otrcat can be combined with other programs and protocols using socat(1).
+Examples:
+
+      *	Like sshd:
+	socat exec:"otrcat listen -expect alice" exec:/bin/bash
+
+      *	Like ssh:
+	otrcat connect -address remotehost:22 -expect bob
+
+      *	Add readline:
+	socat exec:"otrcat listen" readline:
+
+      *	Like ssh -L:
+	socat tcp-listen:8080 exec:"otrcat listen"
+
+
+DIFFERENCES FROM USUAL OTR
+
+The Off-The-Record protocol was designed for instant messaging use. Therefore,
+even though the underlying protocol is the same, there are several important
+differences in how the protocol is used:
+      *	Otrcat is designed to accommodate non-interactive use. For this
+	reason, it never sends or receives data in plain text, it exits with
+	an error if there is any kind of authentication or authorisation
+	problem, and it refuses to allow changing identities mid-conversation.
+
+      *	The OTR protocol is built on the idea of instant messages, which have
+	clearly defined boundaries. Otrcat, on the other hand, communications
+	streams of text without any boundaries. This means Otrcat would be
+	difficult to use as a building block in an instant messenger program.
