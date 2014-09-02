@@ -28,7 +28,7 @@ func startProxy(args []string) (cmd *exec.Cmd, stdio PipePair, err error) {
 		return
 	}
 	stdio = PipePair{out, in}
-	err = cmd.Run()
+	err = cmd.Start()
 	return
 }
 

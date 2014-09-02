@@ -451,7 +451,7 @@ func main() {
 	args = cmd.flags.Args()
 	if cmd.name == "proxy" {
 		if len(args) == 0 {
-			fmt.Fprintf(os.Stderr, "'proxy' needs an command to be specified.\n")
+			fmt.Fprintf(os.Stderr, "'proxy' needs a command to be specified.\n")
 			helpCommand(cmd)
 		}
 	} else {
