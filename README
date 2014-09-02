@@ -32,11 +32,14 @@ Why you SHOULD use Otrcat:
 	remains a daunting task.
 
       *	The goal of Otrcat is to implement only one task but in a very secure
-	way: an authenticated, encrypted, and forward secure communication channel.
-	It is not intended to reach the complexity level of OpenSSH that
-	provides various additional tools such as login, terminal management,
-	port forwarding, stream multiplexing, client/server logic, and
-	cryptography in one big package.
+	way: an authenticated, encrypted, and forward secure communication
+	channel.  It is not intended to reach the complexity level of OpenSSH
+	that provides various additional tools such as login, terminal
+	management, port forwarding, stream multiplexing, client/server logic,
+	and cryptography in one big package.
+
+      * Otrcat is peer-to-peer, and does not require separate client/server
+	configurations.  (This is unlike OpenSSH.)
 
       *	The OTR protocol has deniability features absent from SSH and SSL.
 	Roughly speaking, participants in an OTR conversation publish secret
@@ -49,7 +52,7 @@ Why you SHOULD NOT use Otrcat:
 	this will change soon.
       *	It is still slow.
       *	It's immature -- only tested on FreeBSD and Linux, no unit tests, etc.
-      *	If we didn't mention it yet: Otrcat is immature!!! Know what you do.
+      *	If we didn't mention it yet: Otrcat is immature!!!  Be careful.
 
 
 GETTING STARTED
@@ -102,10 +105,10 @@ Otrcat can be combined with other programs and protocols using socat(1).
 Examples:
 
       *	Like sshd:
-	socat exec:"otrcat listen -expect alice" exec:/bin/bash
+	socat exec:"otrcat listen -expect alice" exec:"/bin/bash",pty,ctty,stderr
 
       *	Like ssh:
-	otrcat connect -address remotehost:22 -expect bob
+	socat -,raw,echo=0 exec:"otrcat connect bob-desktop -expect bob"
 
       *	Add readline:
 	socat exec:"otrcat listen" readline:
