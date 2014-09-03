@@ -23,6 +23,7 @@ import (
 const OTRPort = ":2147"
 
 type Command struct {
+	name  string
 	desc  string
 	flags *flag.FlagSet
 	args  []string
@@ -39,7 +40,6 @@ var (
 	contactsReverse map[string]string = make(map[string]string) // fingerprint -> name
 
 	// Things parsed from command-line arguments
-	cmdName        string
 	cmd            *Command
 	args           []string // Non-flag arguments
 	dir            string
@@ -50,7 +50,7 @@ var (
 	remember       string
 	expect         string
 
-	cmds map[string] *Command // Commands (effectively a constant)
+	cmds []Command // Commands (effectively a constant)
 )
 
 // Command-line flags
@@ -276,13 +276,13 @@ func parseConversationFlags() {
 		}
 	}
 
-	if cmdName == "proxy" {
+	if cmd.name == "proxy" {
 		return
 	}
 
 	if len(args) == 1 {
 		address = args[0]
-		if cmdName == "listen" {
+		if cmd.name == "listen" {
 			if !strings.HasPrefix(address, ":") {
 				exitPrintf("Can't listen on a remote address (%s).  "+
 					"Specify a local port with ':port'.\n", address)
@@ -394,28 +394,37 @@ func fingerprints() {
 	}
 }
 
+func matchCommand(name string) *Command {
+	for _, cmd := range cmds {
+		if cmd.name == name {
+			return &cmd
+		}
+	}
+	return nil
+}
+
 func helpFlags() *flag.FlagSet {
 	return flag.NewFlagSet("help", flag.ExitOnError)
 }
 
 func help() {
-	if cmdName == "help" {
+	if cmd != nil && cmd.name == "help" {
 		if len(args) > 0 {
-			if _, found := cmds[args[0]]; found {
-				helpCommand(args[0])
+			cmd = matchCommand(args[0])
+			if cmd != nil {
+				helpCommand(cmd)
 			}
 		}
 	}
 	fmt.Fprintf(os.Stderr, "Usage:\n")
-	for name, cmd := range cmds {
-		fmt.Fprintf(os.Stderr, "otrcat %-15s %s\n", name, cmd.desc)
+	for _, cmd := range cmds {
+		fmt.Fprintf(os.Stderr, "otrcat %-15s %s\n", cmd.name, cmd.desc)
 	}
 	os.Exit(1)
 }
 
-func helpCommand(name string) {
-	cmd := cmds[name]
-	fmt.Fprintf(os.Stderr, "Usage: otrcat %s", name)
+func helpCommand(cmd *Command) {
+	fmt.Fprintf(os.Stderr, "Usage: otrcat %s", cmd.name)
 	for _, arg := range cmd.args {
 		fmt.Fprintf(os.Stderr, " %s", arg)
 	}
@@ -425,36 +434,33 @@ func helpCommand(name string) {
 }
 
 func main() {
-	cmds = map[string] *Command{
-		"connect":      &Command{"start a conversation", connectFlags(), []string{"[host][:port]"}, connect},
-		"fingerprints": &Command{"show contacts' fingerprints", fingerprintsFlags(), []string{}, fingerprints},
-		"genkey":       &Command{"create a new private key", genkeyFlags(), []string{}, genkey},
-		"help":         &Command{"help on each command", helpFlags(), []string{"[command]"}, help},
-		"listen":       &Command{"wait for someone to start a conversation", listenFlags(), []string{"[:port]"}, listen},
-		"proxy":        &Command{"connect with a proxy command", proxyFlags(), []string{"command", "[args]"}, proxy},
+	cmds = []Command{
+		Command{"connect", "start a conversation", connectFlags(), []string{"[host][:port]"}, connect},
+		Command{"fingerprints", "show contacts' fingerprints", fingerprintsFlags(), []string{}, fingerprints},
+		Command{"genkey", "create a new private key", genkeyFlags(), []string{}, genkey},
+		Command{"help", "help on each command", helpFlags(), []string{"[command]"}, help},
+		Command{"listen", "wait for someone to start a conversation", listenFlags(), []string{"[:port]"}, listen},
+		Command{"proxy", "connect with a proxy command", proxyFlags(), []string{"command", "[args]"}, proxy},
 	}
 	if len(os.Args) < 2 {
 		help()
 	}
-
-	var found bool
-	cmdName = os.Args[1]
-	cmd, found = cmds[cmdName]
-	if !found {
+	cmd = matchCommand(os.Args[1])
+	if cmd == nil {
 		help()
 	}
 	cmd.flags.Parse(os.Args[2:])
 	args = cmd.flags.Args()
-	if cmdName == "proxy" {
+	if cmd.name == "proxy" {
 		if len(args) == 0 {
 			fmt.Fprintf(os.Stderr, "'proxy' needs a command to be specified.\n")
-			helpCommand(cmdName)
+			helpCommand(cmd)
 		}
 	} else {
 		if len(args) > len(cmd.args) {
 			fmt.Fprintf(os.Stderr, "%s only takes up to %d parameters.\n",
-				cmdName, len(cmd.args))
-			helpCommand(cmdName)
+				cmd.name, len(cmd.name))
+			helpCommand(cmd)
 		}
 	}
 	dir = os.ExpandEnv(dir)
