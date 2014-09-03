@@ -31,8 +31,16 @@ func NewMessageDecoder(r io.Reader) *MessageDecoder {
 	return &MessageDecoder{*json.NewDecoder(r)}
 }
 
-func (e *MessageEncoder) EncodeMessages(msgs [][]byte) {
-	for _, msg := range msgs {
+func (e *MessageEncoder) EncodeForever(ch chan []byte, finished chan bool) {
+	for {
+		msg, open := <-ch
+		if !open {
+			return
+		}
+		if msg == nil {
+			finished <- true
+			return
+		}
 		if err := e.Encode(msg); err != nil {
 			exitError(err)
 		}

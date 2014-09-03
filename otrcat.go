@@ -134,18 +134,42 @@ func authoriseRemember(fingerprint string) {
 }
 
 // Turns a Reader into a channel of buffers
-func readLoop(rdr io.Reader, ch (chan []byte)) {
+func readLoop(r io.Reader, ch (chan []byte)) {
 	for {
 		buf := make([]byte, 4096)
-		n, err := rdr.Read(buf)
-		if err != nil {
-			if err != io.EOF {
-				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-			}
+		n, err := r.Read(buf)
+		if err == io.EOF {
 			close(ch)
 			return
 		}
+		if err != nil {
+			exitError(err)
+		}
 		ch <- buf[:n]
+	}
+}
+
+func writeLoop(w io.Writer, ch (chan []byte)) {
+	for {
+		buf, open := <- ch
+		if !open {
+			return
+		}
+		_, err := w.Write(buf)
+		if err != nil {
+			exitError(err)
+		}
+	}
+}
+
+func sigLoop(ch chan os.Signal) {
+	listener := make(chan os.Signal)
+	signal.Notify(listener, os.Interrupt)
+	for {
+		select {
+			case sig := <-listener:
+				ch <- sig
+		}
 	}
 }
 
@@ -159,40 +183,54 @@ func readLoop(rdr io.Reader, ch (chan []byte)) {
 // * When an encrypted session has been established, it checks if the contact
 // is authentication and authorised (according to -remember and -expect).
 func mainLoop(upstream io.ReadWriter) {
-	tcpChan := make(chan []byte)
-	stdChan := make(chan []byte, 1)
+	netOutFinished := make(chan bool)
+	netOutChan := make(chan []byte, 100)
+	netInChan := make(chan []byte, 100)
+	stdInChan := make(chan []byte, 100)
+	stdOutChan := make(chan []byte, 100)
 	sigChan := make(chan os.Signal)
 
 	// Encode everything (with JSON) before sending
 	msgEncoder, msgDecoder := NewMessageEncoder(upstream), NewMessageDecoder(upstream)
 
-	signal.Notify(sigChan, os.Interrupt)
-	go msgDecoder.DecodeForever(tcpChan)
-	stdChan <- []byte(otr.QueryMessage) // Queue a handshake message to be sent
+	go msgDecoder.DecodeForever(netInChan)
+	go msgEncoder.EncodeForever(netOutChan, netOutFinished)
+	go writeLoop(os.Stdout, stdOutChan)
+	go sigLoop(sigChan)
+	send := func(toSend [][]byte) {
+		for _, msg := range(toSend) {
+			netOutChan <- msg
+		}
+	}
+	stdInChan <- []byte(otr.QueryMessage) // Queue a handshake message to be sent
 
 	authorised := false // conversation ready to send secret data?
+	Loop:
 	for {
 		select {
 		// Handle Terminate signal gracefully.  (This is important for
 		// deniability.)
 		case _ = <-sigChan:
+			fmt.Fprintf(os.Stderr, "SIGTERM\n")
 			toSend := conv.End()
-			msgEncoder.EncodeMessages(toSend)
-			return
+			send(toSend)
+			netOutChan <- nil
+			break Loop
 
-		case plaintext, moreInput := <-stdChan:
+		case plaintext, moreInput := <-stdInChan:
 			if !moreInput {
 				toSend := conv.End()
-				msgEncoder.EncodeMessages(toSend)
-				return
+				send(toSend)
+				netOutChan <- nil
+				break Loop
 			}
 			toSend, err := conv.Send(plaintext)
 			if err != nil {
 				exitError(err)
 			}
-			msgEncoder.EncodeMessages(toSend)
+			send(toSend)
 
-		case otrText, alive := <-tcpChan:
+		case otrText, alive := <-netInChan:
 			if !alive {
 				exitPrintf("Connection dropped.\n")
 			}
@@ -201,9 +239,10 @@ func mainLoop(upstream io.ReadWriter) {
 				exitError(err)
 			}
 			if state == otr.ConversationEnded {
-				return
+				netOutChan <- nil
+				break Loop
 			}
-			msgEncoder.EncodeMessages(toSend)
+			send(toSend)
 			if conv.IsEncrypted() {
 				fingerprint := string(conv.TheirPublicKey.Fingerprint())
 				if authorised && theirFingerprint != fingerprint {
@@ -213,17 +252,19 @@ func mainLoop(upstream io.ReadWriter) {
 					theirFingerprint = fingerprint
 					authoriseRemember(fingerprint)
 					authorised = true
-					go readLoop(os.Stdin, stdChan)
+					go readLoop(os.Stdin, stdInChan)
 				}
 			}
 			if len(plaintext) > 0 {
 				if !encrypted || !authorised {
 					exitPrintf("Received unencrypted or unauthenticated text.\n")
 				}
-				os.Stdout.Write(plaintext)
+				stdOutChan <- plaintext
 			}
 		}
 	}
+
+	<-netOutFinished
 }
 
 func genkeyFlags() (flags *flag.FlagSet) {

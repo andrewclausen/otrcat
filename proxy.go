@@ -36,6 +36,11 @@ func startProxy(args []string) (cmd *exec.Cmd, stdio PipePair, err error) {
 
 // TODO: should we kill the cmd?
 func closeProxy(cmd *exec.Cmd, stdio PipePair) {
-	stdio.ReadCloser.Close()
-	stdio.WriteCloser.Close()
+//	stdio.ReadCloser.Close()
+//	if err := stdio.WriteCloser.Close(); err != nil {
+//		exitError(err)
+//	}
+	if err := cmd.Wait(); err != nil {
+		exitError(err)
+	}
 }

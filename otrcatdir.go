@@ -94,10 +94,7 @@ func saveContacts(path string) {
 func loadContacts(path string) {
 	establishDir(false)
 	file, err := os.Open(path)
-	if os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr,
-			"Creating a new contacts file (%s).\n", path)
-		saveContacts(path)
+	if err != nil {
 		return
 	}
 	for {
