@@ -212,16 +212,10 @@ func mainLoop(upstream io.ReadWriter) {
 		// deniability.)
 		case _ = <-sigChan:
 			fmt.Fprintf(os.Stderr, "SIGTERM\n")
-			toSend := conv.End()
-			send(toSend)
-			netOutChan <- nil
 			break Loop
 
 		case plaintext, moreInput := <-stdInChan:
 			if !moreInput {
-				toSend := conv.End()
-				send(toSend)
-				netOutChan <- nil
 				break Loop
 			}
 			toSend, err := conv.Send(plaintext)
@@ -239,8 +233,7 @@ func mainLoop(upstream io.ReadWriter) {
 				exitError(err)
 			}
 			if state == otr.ConversationEnded {
-				netOutChan <- nil
-				break Loop
+				return
 			}
 			send(toSend)
 			if conv.IsEncrypted() {
@@ -264,6 +257,9 @@ func mainLoop(upstream io.ReadWriter) {
 		}
 	}
 
+	toSend := conv.End()
+	send(toSend)
+	netOutChan <- nil
 	<-netOutFinished
 }
 
