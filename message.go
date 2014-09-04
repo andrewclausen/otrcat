@@ -31,14 +31,13 @@ func NewMessageDecoder(r io.Reader) *MessageDecoder {
 	return &MessageDecoder{*json.NewDecoder(r)}
 }
 
-func (e *MessageEncoder) EncodeForever(ch chan []byte, finished chan bool) {
+func (e *MessageEncoder) EncodeForever(ch chan []byte) {
 	for {
 		msg, open := <-ch
 		if !open {
 			return
 		}
 		if msg == nil {
-			finished <- true
 			return
 		}
 		if err := e.Encode(msg); err != nil {

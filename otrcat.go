@@ -184,7 +184,6 @@ func sigLoop(ch chan os.Signal) {
 // * When an encrypted session has been established, it checks if the contact
 // is authentication and authorised (according to -remember and -expect).
 func mainLoop(upstream io.ReadWriter) {
-	netOutFinished := make(chan bool)
 	netOutChan := make(chan []byte, 100)
 	netInChan := make(chan []byte, 100)
 	stdInChan := make(chan []byte, 100)
@@ -195,7 +194,7 @@ func mainLoop(upstream io.ReadWriter) {
 	msgEncoder, msgDecoder := NewMessageEncoder(upstream), NewMessageDecoder(upstream)
 
 	go msgDecoder.DecodeForever(netInChan)
-	go msgEncoder.EncodeForever(netOutChan, netOutFinished)
+	go msgEncoder.EncodeForever(netOutChan)
 	go writeLoop(os.Stdout, stdOutChan)
 	go sigLoop(sigTermChan)
 	send := func(toSend [][]byte) {
@@ -270,7 +269,6 @@ func mainLoop(upstream io.ReadWriter) {
 			}
 		}
 	}
-	<-netOutFinished
 }
 
 func genkeyFlags() (flags *flag.FlagSet) {
