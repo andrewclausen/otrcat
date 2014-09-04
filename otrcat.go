@@ -220,9 +220,6 @@ func mainLoop(upstream io.ReadWriter) {
 			if !alive {
 				break Loop
 			}
-			if !authorised {
-				panic("Bug: started reading secret text prematurely.")
-			}
 			toSend, err := conv.Send(plaintext)
 			if err != nil {
 				exitError(err)
