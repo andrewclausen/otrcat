@@ -186,22 +186,27 @@ func sigLoop(ch chan os.Signal) {
 func mainLoop(upstream io.ReadWriter) {
 	netOutChan := make(chan []byte, 100)
 	netInChan := make(chan []byte, 100)
-	stdInChan := make(chan []byte, 100)
 	stdOutChan := make(chan []byte, 100)
+	stdInChan := make(chan []byte, 100)
 	sigTermChan := make(chan os.Signal)
 
 	// Encode everything (with JSON) before sending
 	msgEncoder, msgDecoder := NewMessageEncoder(upstream), NewMessageDecoder(upstream)
 
-	go msgDecoder.DecodeForever(netInChan)
 	go msgEncoder.EncodeForever(netOutChan)
+	go msgDecoder.DecodeForever(netInChan)
 	go writeLoop(os.Stdout, stdOutChan)
+	// Don't touch secret text until we are sure everything is encrypted and
+	// authorised.
+	// go readLoop(os.Stdin, stdInChan)
 	go sigLoop(sigTermChan)
+
 	send := func(toSend [][]byte) {
 		for _, msg := range(toSend) {
 			netOutChan <- msg
 		}
 	}
+
 	stdInChan <- []byte(otr.QueryMessage) // Queue a handshake message to be sent
 
 	authorised := false // conversation ready to send secret data?
@@ -214,6 +219,9 @@ func mainLoop(upstream io.ReadWriter) {
 		case plaintext, alive := <-stdInChan:
 			if !alive {
 				break Loop
+			}
+			if !authorised {
+				panic("Bug: started reading secret text prematurely.")
 			}
 			toSend, err := conv.Send(plaintext)
 			if err != nil {
