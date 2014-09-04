@@ -42,8 +42,10 @@ Why you SHOULD use Otrcat:
 	configurations.  (This is unlike OpenSSH.)
 
       *	The OTR protocol has deniability features absent from SSH and SSL.
-	Roughly speaking, participants in an OTR conversation publish secret
-	information regularly, to help an eavesdropper falsify any possible
+	Deniability means that if somebody is somehow able to obtain the actual
+ 	chat logs, they should not be able to prove they are authentic.  An
+	important part of this is that participants in an OTR conversation publish
+	secret information regularly, to help an eavesdropper falsify any possible
 	conversation.
 
 

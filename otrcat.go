@@ -228,7 +228,7 @@ func mainLoop(upstream io.ReadWriter) {
 
 		case otrText, alive := <-netInChan:
 			if !alive {
-				exitPrintf("Connection dropped.\n")
+				exitPrintf("Connection dropped!  Recent messages might not be deniable.\n")
 			}
 			plaintext, encrypted, state, toSend, err := conv.Receive(otrText)
 			if err != nil {
