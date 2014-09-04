@@ -162,6 +162,7 @@ func writeLoop(w io.Writer, ch (chan []byte)) {
 	}
 }
 
+// Listen for SIGTERM signals
 func sigLoop(ch chan os.Signal) {
 	listener := make(chan os.Signal)
 	signal.Notify(listener, os.Interrupt)
@@ -188,7 +189,7 @@ func mainLoop(upstream io.ReadWriter) {
 	netInChan := make(chan []byte, 100)
 	stdInChan := make(chan []byte, 100)
 	stdOutChan := make(chan []byte, 100)
-	sigChan := make(chan os.Signal)
+	sigTermChan := make(chan os.Signal)
 
 	// Encode everything (with JSON) before sending
 	msgEncoder, msgDecoder := NewMessageEncoder(upstream), NewMessageDecoder(upstream)
@@ -196,7 +197,7 @@ func mainLoop(upstream io.ReadWriter) {
 	go msgDecoder.DecodeForever(netInChan)
 	go msgEncoder.EncodeForever(netOutChan, netOutFinished)
 	go writeLoop(os.Stdout, stdOutChan)
-	go sigLoop(sigChan)
+	go sigLoop(sigTermChan)
 	send := func(toSend [][]byte) {
 		for _, msg := range(toSend) {
 			netOutChan <- msg
@@ -208,14 +209,11 @@ func mainLoop(upstream io.ReadWriter) {
 	Loop:
 	for {
 		select {
-		// Handle Terminate signal gracefully.  (This is important for
-		// deniability.)
-		case _ = <-sigChan:
-			fmt.Fprintf(os.Stderr, "SIGTERM\n")
+		case _ = <-sigTermChan:
 			break Loop
 
-		case plaintext, moreInput := <-stdInChan:
-			if !moreInput {
+		case plaintext, alive := <-stdInChan:
+			if !alive {
 				break Loop
 			}
 			toSend, err := conv.Send(plaintext)
@@ -257,9 +255,21 @@ func mainLoop(upstream io.ReadWriter) {
 		}
 	}
 
+	// We want to terminate the conversation.  Send the termination messages,
+	// and wait for the other side to close the connection.  It's important
+	// that these messages get through, for deniability.
 	toSend := conv.End()
 	send(toSend)
 	netOutChan <- nil
+	ShutdownLoop:
+	for {
+		select {
+		case _, alive := <-netInChan:
+			if !alive {
+				break ShutdownLoop
+			}
+		}
+	}
 	<-netOutFinished
 }
 
