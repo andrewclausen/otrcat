@@ -262,7 +262,6 @@ func mainLoop(upstream io.ReadWriter) {
 	// We want to terminate the conversation.  Send the termination messages,
 	// and wait for the other side to close the connection.  It's important
 	// that these messages get through, for deniability.
-	fmt.Fprintf(os.Stderr, "Terminating converstaion.\n")
 	toSend := conv.End()
 	send(toSend)
 	netOutChan <- nil
