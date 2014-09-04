@@ -4,6 +4,8 @@
 // Copyright (C) 2014 Andrew Clausen
 // This program may be distributed under the BSD-style licence that Go is
 // released under; see https://golang.org/LICENSE.
+//
+// TODO: why doesn't sending binary plaintext data work?
 
 package main
 

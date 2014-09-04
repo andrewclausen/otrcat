@@ -7,8 +7,6 @@
 // deliver messages, which combines and splits packets in an ad hoc way.
 // This file uses JSON to encode each OTR fragment, so that the TCP stream of
 // bytes can be reassembled at the other end into a stream of OTR fragments.
-//
-// TODO: this doesn't seem to work for binary data.
 
 package main
 
