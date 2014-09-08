@@ -86,13 +86,10 @@ func (d *DelimitedDecoder) Decode() (buf []byte, err error) {
 		input := make([]byte, 4096)
 		n, err = d.Reader.Read(input)
 		if err != nil {
-			if err != io.EOF {
-				return
+			if err == io.EOF && len(d.queue) > 0 {
+				return nil, errors.New("Stream closed mid-message")
 			}
-			if len(d.queue) == 0 {
-				return
-			}
-			return nil, errors.New("Stream closed mid-message")
+			return
 		}
 		d.queue = append(d.queue, input[:n]...)
 	}
