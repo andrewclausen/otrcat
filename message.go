@@ -77,21 +77,21 @@ func (e *DelimitedEncoder) Encode(data []byte) (err error) {
 }
 
 func (d *DelimitedDecoder) Decode() (buf []byte, err error) {
-	var n int
+	var k, n int
 	for {
 		n = bytes.Index(d.queue, d.delimiter)
 		if n != -1 {
 			break
 		}
 		input := make([]byte, 4096)
-		n, err = d.Reader.Read(input)
+		k, err = d.Reader.Read(input)
 		if err != nil {
 			if err == io.EOF && len(d.queue) > 0 {
 				return nil, errors.New("Stream closed mid-message")
 			}
 			return
 		}
-		d.queue = append(d.queue, input[:n]...)
+		d.queue = append(d.queue, input[:k]...)
 	}
 
 	buf = d.queue[:n]
