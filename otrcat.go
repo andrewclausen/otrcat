@@ -138,7 +138,7 @@ func authoriseRemember(fingerprint string) {
 // Turns a Reader into a channel of buffers
 func readLoop(r io.Reader, ch chan []byte) {
 	for {
-		buf := make([]byte, 4096)
+		buf := make([]byte, 4096)		// TODO: what's a good buffer size?
 		n, err := r.Read(buf)
 		if err == io.EOF {
 			close(ch)
