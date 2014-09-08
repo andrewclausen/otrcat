@@ -65,9 +65,10 @@ func (e *VanillaEncoder) Encode(data []byte) (err error) {
 	return
 }
 
-func (e *VanillaDecoder) Decode() (buf []byte, err error) {
-	_, err = e.Reader.Read(buf)
-	return
+func (e *VanillaDecoder) Decode() ([]byte, error) {
+	buf := make([]byte, 4096)
+	n, err := e.Reader.Read(buf)
+	return buf[:n], err
 }
 
 func (e *DelimitedEncoder) Encode(data []byte) (err error) {
