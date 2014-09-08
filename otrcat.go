@@ -193,10 +193,11 @@ func mainLoop(upstream io.ReadWriter) {
 	sigTermChan := make(chan os.Signal)
 
 	// Encode everything (with JSON) before sending
-	msgEncoder, msgDecoder := NewMessageEncoder(upstream), NewMessageDecoder(upstream)
+	var nl = []byte("\n")
+	msgEncoder, msgDecoder := NewDelimitedEncoder(upstream, nl), NewDelimitedDecoder(upstream, nl)
 
-	go msgEncoder.EncodeForever(netOutChan)
-	go msgDecoder.DecodeForever(netInChan)
+	go EncodeForever(msgEncoder, netOutChan)
+	go DecodeForever(msgDecoder, netInChan)
 	go writeLoop(os.Stdout, stdOutChan)
 	// Don't touch secret text until we are sure everything is encrypted and
 	// authorised.
@@ -230,7 +231,10 @@ func mainLoop(upstream io.ReadWriter) {
 
 		case otrText, alive := <-netInChan:
 			if !alive {
-				exitPrintf("Connection dropped!  Recent messages might not be deniable.\n")
+				if authorised {
+					exitPrintf("Connection dropped!  Recent messages might not be deniable.\n")
+				}
+				exitPrintf("Connection dropped!\n")
 			}
 			plaintext, encrypted, state, toSend, err := conv.Receive(otrText)
 			if err != nil {
