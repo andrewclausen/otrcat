@@ -5,9 +5,9 @@
 // This OTR protocol is designed to work with instant messenger protocols, in
 // which messages are delivered one-by-one.  However, otrcat uses TCP to
 // deliver messages, which combines and splits packets in an ad hoc way.  Our
-// solution is to delimit messages using new-lines, which works because OTR
-// encodes messages using Base64.  Newlines are unobtrusive, so this shouldn't
-// cause compatibility problems.
+// solution is to delimit messages using new-lines.  Newlines are unobtrusive,
+// (especially since OTR messages are base64-encoded), so this shouldn't cause
+// compatibility problems.
 
 package main
 
