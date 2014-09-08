@@ -26,37 +26,37 @@ type MessageDecoder interface {
 }
 
 type VanillaEncoder struct {
-	Writer	io.Writer
+	Writer io.Writer
 }
 
 type VanillaDecoder struct {
-	Reader	io.Reader
+	Reader io.Reader
 }
 
 type DelimitedEncoder struct {
-	Writer	io.Writer
+	Writer    io.Writer
 	delimiter []byte
 }
 
 type DelimitedDecoder struct {
-	Reader  io.Reader
+	Reader    io.Reader
 	delimiter []byte
-	queue	[]byte
+	queue     []byte
 }
 
-func NewVanillaEncoder(writer io.Writer) (*VanillaEncoder) {
+func NewVanillaEncoder(writer io.Writer) *VanillaEncoder {
 	return &VanillaEncoder{writer}
 }
 
-func NewVanillaDecoder(reader io.Reader) (*VanillaDecoder) {
+func NewVanillaDecoder(reader io.Reader) *VanillaDecoder {
 	return &VanillaDecoder{reader}
 }
 
-func NewDelimitedEncoder(writer io.Writer, delimiter []byte) (*DelimitedEncoder) {
+func NewDelimitedEncoder(writer io.Writer, delimiter []byte) *DelimitedEncoder {
 	return &DelimitedEncoder{writer, delimiter}
 }
 
-func NewDelimitedDecoder(reader io.Reader, delimiter []byte) (*DelimitedDecoder) {
+func NewDelimitedDecoder(reader io.Reader, delimiter []byte) *DelimitedDecoder {
 	return &DelimitedDecoder{reader, delimiter, []byte{}}
 }
 

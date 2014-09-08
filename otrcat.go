@@ -136,7 +136,7 @@ func authoriseRemember(fingerprint string) {
 }
 
 // Turns a Reader into a channel of buffers
-func readLoop(r io.Reader, ch (chan []byte)) {
+func readLoop(r io.Reader, ch chan []byte) {
 	for {
 		buf := make([]byte, 4096)
 		n, err := r.Read(buf)
@@ -151,9 +151,9 @@ func readLoop(r io.Reader, ch (chan []byte)) {
 	}
 }
 
-func writeLoop(w io.Writer, ch (chan []byte)) {
+func writeLoop(w io.Writer, ch chan []byte) {
 	for {
-		buf, open := <- ch
+		buf, open := <-ch
 		if !open {
 			return
 		}
@@ -170,8 +170,8 @@ func sigLoop(ch chan os.Signal) {
 	signal.Notify(listener, os.Interrupt)
 	for {
 		select {
-			case sig := <-listener:
-				ch <- sig
+		case sig := <-listener:
+			ch <- sig
 		}
 	}
 }
@@ -205,7 +205,7 @@ func mainLoop(upstream io.ReadWriter) {
 	go sigLoop(sigTermChan)
 
 	send := func(toSend [][]byte) {
-		for _, msg := range(toSend) {
+		for _, msg := range toSend {
 			netOutChan <- msg
 		}
 	}
@@ -213,7 +213,7 @@ func mainLoop(upstream io.ReadWriter) {
 	stdInChan <- []byte(otr.QueryMessage) // Queue a handshake message to be sent
 
 	authorised := false // conversation ready to send secret data?
-	Loop:
+Loop:
 	for {
 		select {
 		case _ = <-sigTermChan:
@@ -272,7 +272,7 @@ func mainLoop(upstream io.ReadWriter) {
 	toSend := conv.End()
 	send(toSend)
 	netOutChan <- nil
-	ShutdownLoop:
+ShutdownLoop:
 	for {
 		select {
 		case _, alive := <-netInChan:
