@@ -24,11 +24,11 @@ import (
 const OTRPort = ":2147"
 
 type Command struct {
+	call  func()
 	name  string
 	desc  string
-	flags *flag.FlagSet
 	args  []string
-	call  func()
+	flags *flag.FlagSet
 }
 
 var (
@@ -454,20 +454,17 @@ func helpCommand(cmd *Command) {
 
 func main() {
 	cmds = []Command{
-		Command{"connect", "start a conversation",
-			flags("connect", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag),
-			[]string{"[host][:port]"}, connect},
-		Command{"fingerprints", "show contacts' fingerprints",
-			flags("fingerprints", dirFlag, keyFileFlag, contactsFileFlag), []string{}, fingerprints},
-		Command{"genkey", "create a new private key",
-			flags("genkey", dirFlag, keyFileFlag), []string{}, genkey},
-		Command{"help", "help on each command", flags("help"), []string{"[command]"}, help},
-		Command{"listen", "wait for someone to start a conversation",
-			flags("listen", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag),
-			[]string{"[:port]"}, listen},
-		Command{"proxy", "connect with a proxy command",
-			flags("proxy", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag),
-			[]string{"command", "[args]"}, proxy},
+		Command{connect, "connect", "start a conversation", []string{"[host][:port]"},
+			flags("connect", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag)},
+		Command{fingerprints, "fingerprints", "show contacts' fingerprints", []string{},
+			flags("fingerprints", dirFlag, keyFileFlag, contactsFileFlag)},
+		Command{genkey, "genkey", "create a new private key", []string{},
+			flags("genkey", dirFlag, keyFileFlag)},
+		Command{help, "help", "help on each command", []string{"[command]"}, flags("help")},
+		Command{listen, "listen", "wait for someone to start a conversation", []string{"[:port]"},
+			flags("listen", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag)},
+		Command{proxy, "proxy", "connect with a proxy command", []string{"command", "[args]"},
+			flags("proxy", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag)},
 	}
 	if len(os.Args) < 2 {
 		help()
