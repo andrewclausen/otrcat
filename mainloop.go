@@ -3,7 +3,7 @@
 // released under; see https://golang.org/LICENSE.
 //
 // This file contains mainLoop(), which forwards, encrypts and decrypts
-// messages.
+// messages.  All authentication and authorisation logic is in here.
 
 package main
 
