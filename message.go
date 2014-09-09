@@ -6,7 +6,7 @@
 // which messages are delivered one-by-one.  However, otrcat uses TCP to
 // deliver messages, which combines and splits packets in an ad hoc way.  Our
 // solution is to delimit messages using new-lines.  Newlines are unobtrusive,
-// (especially since OTR messages are base64-encoded), so this shouldn't cause
+// (especially since OTR messages are base64-sendd), so this shouldn't cause
 // compatibility problems.
 
 package main
@@ -17,111 +17,81 @@ import (
 	"io"
 )
 
-type MessageEncoder interface {
-	Encode([]byte) error
+type MessageSender interface {
+	Send([]byte) error
 }
 
-type MessageDecoder interface {
-	Decode() ([]byte, error)
+type MessageReceiver interface {
+	Receive() ([]byte, error)
 }
 
-type VanillaEncoder struct {
-	Writer io.Writer
-}
-
-type VanillaDecoder struct {
-	Reader io.Reader
-}
-
-type DelimitedEncoder struct {
+type DelimitedSender struct {
 	Writer    io.Writer
 	delimiter []byte
 }
 
-type DelimitedDecoder struct {
+type DelimitedReceiver struct {
 	Reader    io.Reader
 	delimiter []byte
 	queue     []byte
 }
 
-func NewVanillaEncoder(writer io.Writer) *VanillaEncoder {
-	return &VanillaEncoder{writer}
+func NewDelimitedSender(writer io.Writer, delimiter []byte) *DelimitedSender {
+	return &DelimitedSender{writer, delimiter}
 }
 
-func NewVanillaDecoder(reader io.Reader) *VanillaDecoder {
-	return &VanillaDecoder{reader}
+func NewDelimitedReceiver(reader io.Reader, delimiter []byte) *DelimitedReceiver {
+	return &DelimitedReceiver{reader, delimiter, []byte{}}
 }
 
-func NewDelimitedEncoder(writer io.Writer, delimiter []byte) *DelimitedEncoder {
-	return &DelimitedEncoder{writer, delimiter}
-}
-
-func NewDelimitedDecoder(reader io.Reader, delimiter []byte) *DelimitedDecoder {
-	return &DelimitedDecoder{reader, delimiter, []byte{}}
-}
-
-func (e *VanillaEncoder) Encode(data []byte) (err error) {
-	_, err = e.Writer.Write(data)
+func (s *DelimitedSender) Send(data []byte) (err error) {
+	_, err = s.Writer.Write(append(data, s.delimiter...))
 	return
 }
 
-func (e *VanillaDecoder) Decode() ([]byte, error) {
-	buf := make([]byte, 4096)
-	n, err := e.Reader.Read(buf)
-	return buf[:n], err
-}
-
-func (e *DelimitedEncoder) Encode(data []byte) (err error) {
-	_, err = e.Writer.Write(append(data, e.delimiter...))
-	return
-}
-
-func (d *DelimitedDecoder) Decode() (buf []byte, err error) {
+func (r *DelimitedReceiver) Receive() (buf []byte, err error) {
 	var k, n int
 	for {
-		n = bytes.Index(d.queue, d.delimiter)
+		n = bytes.Index(r.queue, r.delimiter)
 		if n != -1 {
 			break
 		}
 		input := make([]byte, 4096)
-		k, err = d.Reader.Read(input)
+		k, err = r.Reader.Read(input)
 		if err != nil {
-			if err == io.EOF && len(d.queue) > 0 {
+			if err == io.EOF && len(r.queue) > 0 {
 				return nil, errors.New("Stream closed mid-message")
 			}
 			return
 		}
-		d.queue = append(d.queue, input[:k]...)
+		r.queue = append(r.queue, input[:k]...)
 	}
 
-	buf = d.queue[:n]
-	m := n + len(d.delimiter)
-	if len(d.queue) == m {
-		d.queue = []byte{}
+	buf = r.queue[:n]
+	m := n + len(r.delimiter)
+	if len(r.queue) == m {
+		r.queue = []byte{}
 	} else {
-		d.queue = d.queue[m:]
+		r.queue = r.queue[m:]
 	}
 	return
 }
 
-func EncodeForever(e MessageEncoder, ch chan []byte) {
+func SendForever(s MessageSender, ch chan []byte) {
 	for {
 		msg, open := <-ch
-		if !open {
+		if !open || msg == nil {
 			return
 		}
-		if msg == nil {
-			return
-		}
-		if err := e.Encode(msg); err != nil {
+		if err := s.Send(msg); err != nil {
 			exitError(err)
 		}
 	}
 }
 
-func DecodeForever(d MessageDecoder, ch chan []byte) {
+func ReceiveForever(r MessageReceiver, ch chan []byte) {
 	for {
-		buf, err := d.Decode()
+		buf, err := r.Receive()
 		if err == io.EOF {
 			close(ch)
 			return

@@ -138,7 +138,7 @@ func authoriseRemember(fingerprint string) {
 // Turns a Reader into a channel of buffers
 func readLoop(r io.Reader, ch chan []byte) {
 	for {
-		buf := make([]byte, 4096)		// TODO: what's a good buffer size?
+		buf := make([]byte, 4096) // TODO: what's a good buffer size?
 		n, err := r.Read(buf)
 		if err == io.EOF {
 			close(ch)
@@ -194,10 +194,10 @@ func mainLoop(upstream io.ReadWriter) {
 
 	// Encode everything (with JSON) before sending
 	var nl = []byte("\n")
-	msgEncoder, msgDecoder := NewDelimitedEncoder(upstream, nl), NewDelimitedDecoder(upstream, nl)
+	msgSender, msgReceiver := NewDelimitedSender(upstream, nl), NewDelimitedReceiver(upstream, nl)
 
-	go EncodeForever(msgEncoder, netOutChan)
-	go DecodeForever(msgDecoder, netInChan)
+	go SendForever(msgSender, netOutChan)
+	go ReceiveForever(msgReceiver, netInChan)
 	go writeLoop(os.Stdout, stdOutChan)
 	// Don't touch secret text until we are sure everything is encrypted and
 	// authorised.
