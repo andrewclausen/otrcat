@@ -80,6 +80,15 @@ func expectFlag(f *flag.FlagSet) {
 	f.StringVar(&expect, "expect", "", "contact to expect; abort if it's someone else")
 }
 
+// A flag.FlagSet constructor.
+func flags(cmd string, flags ...func(*flag.FlagSet)) *flag.FlagSet {
+	fs := flag.NewFlagSet(cmd, flag.ExitOnError)
+	for _, flag := range flags {
+		flag(fs)
+	}
+	return fs
+}
+
 func exitError(err error) {
 	fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 	os.Exit(1)
@@ -288,13 +297,6 @@ ShutdownLoop:
 	}
 }
 
-func genkeyFlags() (flags *flag.FlagSet) {
-	flags = flag.NewFlagSet("genkey", flag.ExitOnError)
-	dirFlag(flags)
-	keyFileFlag(flags)
-	return
-}
-
 // Generates a new private key
 func genkey() {
 	// Key generation takes a long time, so it's polite to check the user's
@@ -366,17 +368,6 @@ func useKey(key *otr.PrivateKey) {
 	}
 }
 
-func connectFlags() (flags *flag.FlagSet) {
-	flags = flag.NewFlagSet("connect", flag.ExitOnError)
-	dirFlag(flags)
-	keyFileFlag(flags)
-	anyoneFlag(flags)
-	rememberFlag(flags)
-	contactsFileFlag(flags)
-	expectFlag(flags)
-	return
-}
-
 func connect() {
 	useKey(loadKey(privateKeyPath))
 	loadContacts(contactsPath)
@@ -387,17 +378,6 @@ func connect() {
 	}
 	mainLoop(conn)
 	conn.Close()
-}
-
-func listenFlags() (flags *flag.FlagSet) {
-	flags = flag.NewFlagSet("listen", flag.ExitOnError)
-	dirFlag(flags)
-	keyFileFlag(flags)
-	anyoneFlag(flags)
-	rememberFlag(flags)
-	contactsFileFlag(flags)
-	expectFlag(flags)
-	return
 }
 
 func listen() {
@@ -416,17 +396,6 @@ func listen() {
 	conn.Close()
 }
 
-func proxyFlags() (flags *flag.FlagSet) {
-	flags = flag.NewFlagSet("proxy", flag.ExitOnError)
-	dirFlag(flags)
-	keyFileFlag(flags)
-	anyoneFlag(flags)
-	rememberFlag(flags)
-	contactsFileFlag(flags)
-	expectFlag(flags)
-	return
-}
-
 func proxy() {
 	useKey(loadKey(privateKeyPath))
 	loadContacts(contactsPath)
@@ -437,14 +406,6 @@ func proxy() {
 	}
 	mainLoop(conn)
 	closeProxy(cmd, conn)
-}
-
-func fingerprintsFlags() (flags *flag.FlagSet) {
-	flags = flag.NewFlagSet("fingerprints", flag.ExitOnError)
-	dirFlag(flags)
-	keyFileFlag(flags)
-	contactsFileFlag(flags)
-	return
 }
 
 // Lists all known contacts (including "me")
@@ -463,10 +424,6 @@ func matchCommand(name string) *Command {
 		}
 	}
 	return nil
-}
-
-func helpFlags() *flag.FlagSet {
-	return flag.NewFlagSet("help", flag.ExitOnError)
 }
 
 func help() {
@@ -497,12 +454,20 @@ func helpCommand(cmd *Command) {
 
 func main() {
 	cmds = []Command{
-		Command{"connect", "start a conversation", connectFlags(), []string{"[host][:port]"}, connect},
-		Command{"fingerprints", "show contacts' fingerprints", fingerprintsFlags(), []string{}, fingerprints},
-		Command{"genkey", "create a new private key", genkeyFlags(), []string{}, genkey},
-		Command{"help", "help on each command", helpFlags(), []string{"[command]"}, help},
-		Command{"listen", "wait for someone to start a conversation", listenFlags(), []string{"[:port]"}, listen},
-		Command{"proxy", "connect with a proxy command", proxyFlags(), []string{"command", "[args]"}, proxy},
+		Command{"connect", "start a conversation",
+			flags("connect", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag),
+			[]string{"[host][:port]"}, connect},
+		Command{"fingerprints", "show contacts' fingerprints",
+			flags("fingerprints", dirFlag, keyFileFlag, contactsFileFlag), []string{}, fingerprints},
+		Command{"genkey", "create a new private key",
+			flags("genkey", dirFlag, keyFileFlag), []string{}, genkey},
+		Command{"help", "help on each command", flags("help"), []string{"[command]"}, help},
+		Command{"listen", "wait for someone to start a conversation",
+			flags("listen", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag),
+			[]string{"[:port]"}, listen},
+		Command{"proxy", "connect with a proxy command",
+			flags("proxy", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag),
+			[]string{"command", "[args]"}, proxy},
 	}
 	if len(os.Args) < 2 {
 		help()
