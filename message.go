@@ -2,7 +2,7 @@
 // This program may be distributed under the BSD-style licence that Go is
 // released under; see https://golang.org/LICENSE.
 //
-// This OTR protocol is designed to work with instant messenger protocols, in
+// The OTR protocol is designed to work with instant messenger protocols, in
 // which messages are delivered one-by-one.  However, otrcat uses TCP to
 // deliver messages, which combines and splits packets in an ad hoc way.  Our
 // solution is to delimit messages using new-lines.  Newlines are unobtrusive,

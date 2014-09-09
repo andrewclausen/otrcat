@@ -4,8 +4,6 @@
 // Copyright (C) 2014 Andrew Clausen
 // This program may be distributed under the BSD-style licence that Go is
 // released under; see https://golang.org/LICENSE.
-//
-// TODO: why doesn't sending binary plaintext data work?
 
 package main
 
@@ -19,6 +17,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"bytes"
 )
 
 // TODO: figure out a good default port
@@ -221,6 +220,12 @@ Loop:
 
 		case plaintext, alive := <-stdInChan:
 			if !alive {
+				break Loop
+			}
+			if bytes.Index(plaintext, []byte{0}) != -1 {
+				fmt.Fprintf(os.Stderr,
+						    "The OTR protocol only supports UTF8-encoded text.\n" +
+						    "Please use base64 or another suitable encoding for binary data.\n")
 				break Loop
 			}
 			toSend, err := conv.Send(plaintext)
