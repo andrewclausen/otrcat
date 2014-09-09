@@ -8,6 +8,7 @@
 package main
 
 import (
+	"bytes"
 	"code.google.com/p/go.crypto/otr"
 	"crypto/rand"
 	"flag"
@@ -17,7 +18,6 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-	"bytes"
 )
 
 // TODO: figure out a good default port
@@ -224,8 +224,8 @@ Loop:
 			}
 			if bytes.Index(plaintext, []byte{0}) != -1 {
 				fmt.Fprintf(os.Stderr,
-						    "The OTR protocol only supports UTF8-encoded text.\n" +
-						    "Please use base64 or another suitable encoding for binary data.\n")
+					"The OTR protocol only supports UTF8-encoded text.\n"+
+						"Please use base64 or another suitable encoding for binary data.\n")
 				break Loop
 			}
 			toSend, err := conv.Send(plaintext)
