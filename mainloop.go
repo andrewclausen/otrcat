@@ -2,7 +2,7 @@
 // This program may be distributed under the BSD-style licence that Go is
 // released under; see https://golang.org/LICENSE.
 //
-// This file has the main-loop logic of forwarding, encrypting and decrypting
+// This file contains mainLoop(), which forwards, encrypts and decrypts
 // messages.
 
 package main
