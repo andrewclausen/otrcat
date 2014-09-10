@@ -17,11 +17,11 @@ protocols. For example, Otrcat can provide secure shell access to servers
 similar to SSH or serve as a secure tunnel for TCP connections.
 
 The leading alternatives to Otrcat are the OpenSSL s_client/s_server commands,
-Socat's OpenSSL commands, OpenSSH, or spiped. We discuss the main advantages
-and disadvantages of Otrcat over these related tools in turn:
+Socat's OpenSSL commands, or OpenSSH. We discuss the main advantages and
+disadvantages of Otrcat over these related tools in turn:
 
 Why you SHOULD use Otrcat:
-      *	Otrcat is implemented in golang, a modern and easy to read programming
+      *	Otrcat is implemented in Go, a modern and easy to read programming
 	language. The advantage is that Otrcat's code is small (~600 lines)
 	and clean.  This is in contrast to the widely adopted OpenSSH which is
 	implemented in C.  The main disadvantage of using such an old language
