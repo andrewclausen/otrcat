@@ -47,6 +47,7 @@ var (
 	anyone         bool
 	remember       string
 	expect         string
+	execCommand    string
 
 	cmds []Command // Commands (effectively a constant)
 )
@@ -75,6 +76,10 @@ func rememberFlag(f *flag.FlagSet) {
 
 func expectFlag(f *flag.FlagSet) {
 	f.StringVar(&expect, "expect", "", "contact to expect; abort if it's someone else")
+}
+
+func execFlag(f *flag.FlagSet) {
+	f.StringVar(&execCommand, "exec", "", "shell command to execute with sh(1); the contact is $1")
 }
 
 // A flag.FlagSet constructor.
@@ -254,16 +259,16 @@ func helpCommand(cmd *Command) {
 func main() {
 	cmds = []Command{
 		Command{connect, "connect", "start a conversation", []string{"[host][:port]"},
-			flags("connect", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag)},
+			flags("connect", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag, execFlag)},
 		Command{fingerprints, "fingerprints", "show contacts' fingerprints", []string{},
 			flags("fingerprints", dirFlag, keyFileFlag, contactsFileFlag)},
 		Command{genkey, "genkey", "create a new private key", []string{},
 			flags("genkey", dirFlag, keyFileFlag)},
 		Command{help, "help", "help on each command", []string{"[command]"}, flags("help")},
 		Command{listen, "listen", "wait for someone to start a conversation", []string{"[:port]"},
-			flags("listen", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag)},
+			flags("listen", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag, execFlag)},
 		Command{proxy, "proxy", "connect with a proxy command", []string{"command", "[args]"},
-			flags("proxy", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag)},
+			flags("proxy", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag, execFlag)},
 	}
 	if len(os.Args) < 2 {
 		help()

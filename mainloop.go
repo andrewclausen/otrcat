@@ -14,6 +14,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"os/exec"
 )
 
 // Checks if the contact is authorised, and remembers the contact if
@@ -58,6 +59,26 @@ func authoriseRemember(fingerprint string) {
 	if remember == "" && known {
 		fmt.Fprintf(os.Stderr, "The contact is '%s'.\n", name)
 	}
+}
+
+
+// Implements the -exec option, which runs a given command using /bin/sh, and
+// connects the processes stdin/stdout to this side of the conversation
+func StartCommand() (io.Reader, io.Writer) {
+	fingerprint := string(conv.TheirPublicKey.Fingerprint())
+	cmd := exec.Command("/bin/sh", "-c", execCommand, "--", contactsReverse[fingerprint])
+	stdIn, err := cmd.StdinPipe()
+	if err != nil {
+		exitError(err)
+	}
+	stdOut, err := cmd.StdoutPipe()
+	if err != nil {
+		exitError(err)
+	}
+	if err := cmd.Start(); err != nil {
+		exitError(err)
+	}
+	return stdOut, stdIn
 }
 
 // Turns a Reader into a channel of buffers
@@ -123,10 +144,10 @@ func mainLoop(upstream io.ReadWriter) {
 
 	go SendForever(msgSender, netOutChan)
 	go ReceiveForever(msgReceiver, netInChan)
-	go writeLoop(os.Stdout, stdOutChan)
-	// Don't touch secret text until we are sure everything is encrypted and
-	// authorised.
+	// Don't touch secret input or output anything until we are sure everything
+	// is encrypted and authorised.
 	// go readLoop(os.Stdin, stdInChan)
+	// go writeLoop(os.Stdout, stdOutChan)
 	go sigLoop(sigTermChan)
 
 	send := func(toSend [][]byte) {
@@ -184,7 +205,16 @@ Loop:
 					theirFingerprint = fingerprint
 					authoriseRemember(fingerprint)
 					authorised = true
-					go readLoop(os.Stdin, stdInChan)
+
+					var w io.Writer
+					var r io.Reader
+
+					r, w = os.Stdout, os.Stdin
+					if execCommand != "" {
+						r, w = StartCommand()
+					}
+					go readLoop(r, stdInChan)
+					go writeLoop(w, stdOutChan)
 				}
 			}
 			if len(plaintext) > 0 {
