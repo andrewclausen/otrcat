@@ -118,6 +118,10 @@ Examples:
       *	Like ssh -L:
 	socat tcp-listen:8080 exec:"otrcat listen"
 
+      * Like scp:
+	cat file | base64 | ./otrcat listen -expect bob
+	./otrcat connect alice-computer -expect alice | base64 -d > file
+
 
 DIFFERENCES FROM USUAL OTR
 
