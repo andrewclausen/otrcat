@@ -69,11 +69,7 @@ func (r *DelimitedReceiver) Receive() (buf []byte, err error) {
 
 	buf = r.queue[:n]
 	m := n + len(r.delimiter)
-	if len(r.queue) == m {
-		r.queue = []byte{}
-	} else {
-		r.queue = r.queue[m:]
-	}
+	r.queue = r.queue[m:]
 	return
 }
 
