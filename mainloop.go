@@ -13,8 +13,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/signal"
 	"os/exec"
+	"os/signal"
 )
 
 // Checks if the contact is authorised, and remembers the contact if
@@ -61,12 +61,10 @@ func authoriseRemember(fingerprint string) {
 	}
 }
 
-
 // Implements the -exec option, which runs a given command using /bin/sh, and
 // connects the processes stdin/stdout to this side of the conversation
-func StartCommand() (io.Reader, io.Writer) {
-	fingerprint := string(conv.TheirPublicKey.Fingerprint())
-	cmd := exec.Command("/bin/sh", "-c", execCommand, "--", contactsReverse[fingerprint])
+func StartCommand(theirFingerprint string) (io.Reader, io.Writer) {
+	cmd := exec.Command("/bin/sh", "-c", execCommand, "--", contactsReverse[theirFingerprint])
 	stdIn, err := cmd.StdinPipe()
 	if err != nil {
 		exitError(err)
@@ -131,7 +129,12 @@ func sigLoop(ch chan os.Signal) {
 // text.
 // * When an encrypted session has been established, it checks if the contact
 // is authentication and authorised (according to -remember and -expect).
-func mainLoop(upstream io.ReadWriter) {
+func mainLoop(privateKey otr.PrivateKey, upstream io.ReadWriter) {
+	var conv otr.Conversation
+	var theirFingerprint string = ""
+
+	conv.PrivateKey = &privateKey
+
 	netOutChan := make(chan []byte, 100)
 	netInChan := make(chan []byte, 100)
 	stdOutChan := make(chan []byte, 100)
@@ -211,7 +214,7 @@ Loop:
 
 					r, w = os.Stdout, os.Stdin
 					if execCommand != "" {
-						r, w = StartCommand()
+						r, w = StartCommand(fingerprint)
 					}
 					go readLoop(r, stdInChan)
 					go writeLoop(w, stdOutChan)

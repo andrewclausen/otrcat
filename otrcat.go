@@ -29,9 +29,7 @@ type Command struct {
 }
 
 var (
-	// Communication state that changes throughout the course of the conversation
-	conv             otr.Conversation
-	theirFingerprint string = ""
+	privateKey		 otr.PrivateKey
 
 	// Contacts, loaded by default from ~/.otrcat/contacts
 	contacts        map[string]string = make(map[string]string) // name -> fingerprint
@@ -48,6 +46,7 @@ var (
 	remember       string
 	expect         string
 	execCommand    string
+	forever        bool
 
 	cmds []Command // Commands (effectively a constant)
 )
@@ -82,6 +81,10 @@ func execFlag(f *flag.FlagSet) {
 	f.StringVar(&execCommand, "exec", "", "shell command to execute with sh(1); the contact is $1")
 }
 
+func foreverFlag(f *flag.FlagSet) {
+	f.BoolVar(&forever, "forever", false, "listen forever; requires -exec")
+}
+
 // A flag.FlagSet constructor.
 func flags(cmd string, flags ...func(*flag.FlagSet)) *flag.FlagSet {
 	fs := flag.NewFlagSet(cmd, flag.ExitOnError)
@@ -112,12 +115,10 @@ func genkey() {
 	}
 
 	fmt.Fprintf(os.Stderr, "Generating a new private key (%s)...", privateKeyPath)
-	privateKey := new(otr.PrivateKey)
 	privateKey.Generate(rand.Reader)
-	conv.PrivateKey = privateKey
 	fmt.Fprintf(os.Stderr, "\n")
 
-	saveKey(privateKeyPath, privateKey)
+	saveKey(privateKeyPath, &privateKey)
 }
 
 // Parses and checks the flags that are relevant for listen/connect/proxy.
@@ -164,7 +165,7 @@ func parseConversationFlags() {
 
 // Selects a private key for use in the conversation
 func useKey(key *otr.PrivateKey) {
-	conv.PrivateKey = key
+	privateKey = *key
 	fingerprint := string(key.PublicKey.Fingerprint())
 	if _, ok := contacts[fingerprint]; !ok {
 		contacts["me"] = fingerprint
@@ -180,7 +181,7 @@ func connect() {
 	if err != nil {
 		exitError(err)
 	}
-	mainLoop(conn)
+	mainLoop(privateKey, conn)
 	conn.Close()
 }
 
@@ -188,16 +189,32 @@ func listen() {
 	useKey(loadKey(privateKeyPath))
 	loadContacts(contactsPath)
 	parseConversationFlags()
+	if forever && execCommand == "" {
+		exitPrintf("-forever requires -exec.\n")
+	}
 	ln, err := net.Listen("tcp", address)
 	if err != nil {
 		exitError(err)
 	}
-	conn, err := ln.Accept()
-	if err != nil {
-		exitError(err)
+	if forever {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				exitError(err)
+			}
+			go func() {
+				mainLoop(privateKey, conn)
+				conn.Close()
+			}()
+		}
+	} else {
+		conn, err := ln.Accept()
+		if err != nil {
+			exitError(err)
+		}
+		mainLoop(privateKey, conn)
+		conn.Close()
 	}
-	mainLoop(conn)
-	conn.Close()
 }
 
 func proxy() {
@@ -208,7 +225,7 @@ func proxy() {
 	if err != nil {
 		exitError(err)
 	}
-	mainLoop(conn)
+	mainLoop(privateKey, conn)
 	closeProxy(cmd, conn)
 }
 
@@ -266,7 +283,7 @@ func main() {
 			flags("genkey", dirFlag, keyFileFlag)},
 		Command{help, "help", "help on each command", []string{"[command]"}, flags("help")},
 		Command{listen, "listen", "wait for someone to start a conversation", []string{"[:port]"},
-			flags("listen", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag, execFlag)},
+			flags("listen", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag, execFlag, foreverFlag)},
 		Command{proxy, "proxy", "connect with a proxy command", []string{"command", "[args]"},
 			flags("proxy", dirFlag, keyFileFlag, anyoneFlag, rememberFlag, contactsFileFlag, expectFlag, execFlag)},
 	}

@@ -110,7 +110,7 @@ Examples:
 	socat exec:"otrcat listen -expect alice" exec:"/bin/bash",pty,ctty,stderr
 
       *	Like sshd: (multi-user, run as root)
-	otrcat listen -exec 'socat - exec:"/bin/login -f $1",pty,ctty,stderr'
+	otrcat listen -forever -exec 'socat - exec:"/bin/login -f $1",pty,ctty,stderr'
 
       *	Like ssh:
 	socat -,raw,echo=0 exec:"otrcat connect bob-desktop -expect bob"
