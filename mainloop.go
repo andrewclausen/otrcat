@@ -65,7 +65,8 @@ func authoriseRemember(fingerprint string) {
 // Implements the -exec option, which runs a given command using /bin/sh, and
 // connects the processes stdin/stdout to this side of the conversation
 func StartCommand(theirFingerprint string) (io.Reader, io.Writer) {
-	cmd := exec.Command("/bin/sh", "-c", execCommand, "--", contactsReverse[theirFingerprint])
+	cmd := exec.Command("/bin/sh", "-c", execCommand, "--",
+		contactsReverse[theirFingerprint])
 	stdIn, err := cmd.StdinPipe()
 	if err != nil {
 		exitError(err)
@@ -99,7 +100,7 @@ func readLoop(r io.Reader, ch chan []byte) {
 // This read loop reads as much as it can every 0.1s (TODO: make this tunable).
 // This is a good compromise for latency, defeating timing-based traffic
 // analysis, and amortising overheads with sending messages.
-func bufferedReadLoop(r io.Reader, ch chan[]byte) {
+func bufferedReadLoop(r io.Reader, ch chan []byte) {
 	upstream := make(chan []byte, 100)
 	go readLoop(r, upstream)
 
@@ -202,7 +203,7 @@ Loop:
 			break Loop
 
 		case plaintext, alive := <-stdInChan:
-//			fmt.Fprintf(os.Stderr, "Read %d bytes of plaintext.\n", len(plaintext))
+			//			fmt.Fprintf(os.Stderr, "Read %d bytes of plaintext.\n", len(plaintext))
 			if !alive {
 				break Loop
 			}
@@ -258,7 +259,7 @@ Loop:
 				if !encrypted || !authorised {
 					exitPrintf("Received unencrypted or unauthenticated text.\n")
 				}
-//				fmt.Fprintf(os.Stderr, "Received %d bytes of plaintext.\n", len(plaintext))
+				//				fmt.Fprintf(os.Stderr, "Received %d bytes of plaintext.\n", len(plaintext))
 				stdOutChan <- plaintext
 			}
 		}

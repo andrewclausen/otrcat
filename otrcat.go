@@ -29,7 +29,7 @@ type Command struct {
 }
 
 var (
-	privateKey		 otr.PrivateKey
+	privateKey otr.PrivateKey
 
 	// Contacts, loaded by default from ~/.otrcat/contacts
 	contacts        map[string]string = make(map[string]string) // name -> fingerprint
