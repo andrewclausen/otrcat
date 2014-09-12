@@ -156,7 +156,7 @@ func sigLoop(ch chan os.Signal) {
 
 // The main loop.
 // * The main job is to pass messages between standard input/output, the OTR
-// library, the TCP socket, and the JSON encoder.
+// library, the TCP socket.
 // * It starts goroutines that listen on standard input and the TCP socket.
 // Note: it only starts listening on standard input when an encrypted
 // connection has been established, to prevent any data being sent in plain
