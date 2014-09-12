@@ -175,7 +175,7 @@ func mainLoop(privateKey otr.PrivateKey, upstream io.ReadWriter) {
 	stdInChan := make(chan []byte, 100)
 	sigTermChan := make(chan os.Signal)
 
-	// Encode everything (with JSON) before sending
+	// Delimit ciphertext messages with newlines
 	var nl = []byte("\n")
 	msgSender, msgReceiver := NewDelimitedSender(upstream, nl), NewDelimitedReceiver(upstream, nl)
 
