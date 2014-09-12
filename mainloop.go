@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"time"
 )
 
 // Checks if the contact is authorised, and remembers the contact if
@@ -79,7 +80,7 @@ func StartCommand(theirFingerprint string) (io.Reader, io.Writer) {
 	return stdOut, stdIn
 }
 
-// Turns a Reader into a channel of buffers
+// Turns a Reader into a channel of buffers.
 func readLoop(r io.Reader, ch chan []byte) {
 	for {
 		buf := make([]byte, 4096) // TODO: what's a good buffer size?
@@ -93,6 +94,38 @@ func readLoop(r io.Reader, ch chan []byte) {
 		}
 		ch <- buf[:n]
 	}
+}
+
+// This read loop reads as much as it can every 0.1s (TODO: make this tunable).
+// This is a good compromise for latency, defeating timing-based traffic
+// analysis, and amortising overheads with sending messages.
+func bufferedReadLoop(r io.Reader, ch chan[]byte) {
+	upstream := make(chan []byte, 100)
+	go readLoop(r, upstream)
+
+	ticker := time.Tick(time.Second / 10)
+	queue := []byte(nil)
+
+Loop:
+	for {
+		select {
+		case buf, open := <-upstream:
+			if !open {
+				break Loop
+			}
+			queue = append(queue, buf...)
+
+		case <-ticker:
+			// TODO: send cover traffic when there is nothing to send?
+			if queue != nil {
+				ch <- queue
+				queue = nil
+			}
+		}
+	}
+
+	ch <- queue
+	close(ch)
 }
 
 func writeLoop(w io.Writer, ch chan []byte) {
@@ -149,7 +182,7 @@ func mainLoop(privateKey otr.PrivateKey, upstream io.ReadWriter) {
 	go ReceiveForever(msgReceiver, netInChan)
 	// Don't touch secret input or output anything until we are sure everything
 	// is encrypted and authorised.
-	// go readLoop(os.Stdin, stdInChan)
+	// go bufferedReadLoop(os.Stdin, stdInChan)
 	// go writeLoop(os.Stdout, stdOutChan)
 	go sigLoop(sigTermChan)
 
@@ -165,10 +198,11 @@ func mainLoop(privateKey otr.PrivateKey, upstream io.ReadWriter) {
 Loop:
 	for {
 		select {
-		case _ = <-sigTermChan:
+		case <-sigTermChan:
 			break Loop
 
 		case plaintext, alive := <-stdInChan:
+//			fmt.Fprintf(os.Stderr, "Read %d bytes of plaintext.\n", len(plaintext))
 			if !alive {
 				break Loop
 			}
@@ -212,11 +246,11 @@ Loop:
 					var w io.Writer
 					var r io.Reader
 
-					r, w = os.Stdout, os.Stdin
+					r, w = os.Stdin, os.Stdout
 					if execCommand != "" {
 						r, w = StartCommand(fingerprint)
 					}
-					go readLoop(r, stdInChan)
+					go bufferedReadLoop(r, stdInChan)
 					go writeLoop(w, stdOutChan)
 				}
 			}
@@ -224,6 +258,7 @@ Loop:
 				if !encrypted || !authorised {
 					exitPrintf("Received unencrypted or unauthenticated text.\n")
 				}
+//				fmt.Fprintf(os.Stderr, "Received %d bytes of plaintext.\n", len(plaintext))
 				stdOutChan <- plaintext
 			}
 		}
