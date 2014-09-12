@@ -50,11 +50,33 @@ Why you SHOULD use Otrcat:
 
 
 Why you SHOULD NOT use Otrcat:
-      *	The OTR protocol currently only supports 1024-bit DSA keys. We hope,
+      *	The OTR protocol currently only supports 1024-bit DSA keys.  We hope
 	this will change soon.
       *	It is still slow.
       *	It's immature -- only tested on FreeBSD and Linux, no unit tests, etc.
       *	If we didn't mention it yet: Otrcat is immature!!!  Be careful.
+
+
+INSTALLATION
+
+1. Install Go, Mercurial and Git:
+      * On Debian/Ubuntu, type:
+
+		sudo apt-get install golang-go mercurial git
+
+2. Setup Go:
+
+	mkdir ~/go; export GOPATH=~/go
+
+3. Download Otrcat and everything it uses:
+
+	cd ~/go; go get git://github.com/andrewclausen.net/
+
+4. Compile Otrcat:
+
+	cd ~/go; go build
+
+5. Install Otrcat:  put the otrcat binary somewhere in the search path.
 
 
 GETTING STARTED
