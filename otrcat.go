@@ -151,6 +151,9 @@ func parseConversationFlags() {
 
 	if len(args) == 1 {
 		address = args[0]
+		if address == "" {
+			address = OTRPort
+		}
 		if cmd.name == "listen" {
 			if !strings.HasPrefix(address, ":") {
 				exitPrintf("Can't listen on a remote address (%s).  "+

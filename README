@@ -107,10 +107,10 @@ Otrcat can be combined with other programs and protocols using socat(1).
 Examples:
 
       *	Like sshd: (one user)
-	socat exec:"otrcat listen -expect alice" exec:"/bin/bash",pty,ctty,stderr
+	socat exec:"otrcat listen -expect alice" exec:"/bin/bash",pty,ctty,stderr,setsid,setpgid
 
       *	Like sshd: (multi-user, run as root)
-	otrcat listen -forever -exec 'socat - exec:"/bin/login -f $1",pty,ctty,stderr'
+	otrcat listen -forever -exec 'socat - exec:"/bin/login -f $1",pty,ctty,stderr,setsid,setpgid'
 
       *	Like ssh:
 	socat -,raw,echo=0 exec:"otrcat connect bob-desktop -expect bob"
