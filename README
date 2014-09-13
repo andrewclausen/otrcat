@@ -65,16 +65,20 @@ INSTALLATION
 		sudo apt-get install golang-go mercurial git
 
 2. Setup Go:
+      * Debian/Ubuntu (or any operating system with the bash shell):
 
-	mkdir ~/go; export GOPATH=~/go
+	mkdir ~/go
+	export GOPATH=~/go
 
 3. Download Otrcat and everything it uses:
 
-	cd ~/go; go get git://github.com/andrewclausen.net/
+	cd ~/go
+	go get github.com/andrewclausen/otrcat
 
 4. Compile Otrcat:
 
-	cd ~/go; go build
+	cd ~/go
+	go build
 
 5. Install Otrcat:  put the otrcat binary somewhere in the search path.
 
